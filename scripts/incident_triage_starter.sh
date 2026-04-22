@@ -55,8 +55,13 @@ validate_positive_int() {
   [[ "$1" =~ ^[0-9]+$ ]] && [[ "$1" -gt 0 ]]
 }
 
+validate_journal_window() {
+  [[ -n "$1" ]] && [[ "$1" =~ ^[[:alnum:]][[:alnum:][:space:].:_+-]*$ ]]
+}
+
 register_skip() {
   local reason="$1"
+  TOTAL_COMMANDS=$((TOTAL_COMMANDS + 1))
   SKIPPED_COMMANDS=$((SKIPPED_COMMANDS + 1))
   log "WARN" "${reason}"
 }
@@ -72,7 +77,7 @@ run_capture() {
 
   log "INFO" "Collecting: ${label}"
   if "${DRY_RUN}"; then
-    printf '%s\t%s\t%s\n' "${label}" "${outfile}" "${command_text}" >>"${OUTPUT_DIR}/collection_plan.tsv"
+    printf 'DRY-RUN\t%s\t%s\t%s\n' "${label}" "${outfile}" "${command_text}"
     SUCCESSFUL_COMMANDS=$((SUCCESSFUL_COMMANDS + 1))
     return 0
   fi
@@ -117,6 +122,7 @@ parse_args() {
         ;;
       --journal-window)
         [[ $# -ge 2 ]] || fail "Missing value for --journal-window"
+        validate_journal_window "$2" || fail "--journal-window must contain only letters, numbers, spaces, and . : _ + -"
         JOURNAL_WINDOW="$2"
         shift 2
         ;;
@@ -193,6 +199,8 @@ collect_network_data() {
 }
 
 collect_auth_data() {
+  local journal_since
+
   run_capture "Current login accounting (lastlog)" "${OUTPUT_DIR}/auth/lastlog.txt" "lastlog"
 
   if [[ -r /var/log/auth.log ]]; then
@@ -208,14 +216,15 @@ collect_auth_data() {
   fi
 
   if command_exists "journalctl"; then
+    printf -v journal_since '%q' "-${JOURNAL_WINDOW}"
     run_capture \
       "Auth-focused journal view" \
       "${OUTPUT_DIR}/auth/journal_auth_focus.txt" \
-      "journalctl --since '-${JOURNAL_WINDOW}' --no-pager | grep -Ei 'sudo|sshd|authentication|failed password|accepted password|session (opened|closed)' || true"
+      "journalctl --since ${journal_since} --no-pager | grep -Ei 'sudo|sshd|authentication|failed password|accepted password|session (opened|closed)' || true"
     run_capture \
       "SSH service journal window" \
       "${OUTPUT_DIR}/auth/journal_ssh_window.txt" \
-      "journalctl --since '-${JOURNAL_WINDOW}' --no-pager -u ssh.service -u ssh"
+      "journalctl --since ${journal_since} --no-pager -u ssh.service -u ssh"
   else
     register_skip "Skipping journal captures: command 'journalctl' not available"
   fi
@@ -246,8 +255,10 @@ EOF
 
 main() {
   parse_args "$@"
-  create_directories
-  write_metadata
+  if ! "${DRY_RUN}"; then
+    create_directories
+    write_metadata
+  fi
 
   log "INFO" "Output directory: ${OUTPUT_DIR}"
   if [[ "${EUID}" -ne 0 ]]; then
@@ -259,14 +270,18 @@ main() {
   collect_process_data
   collect_network_data
   collect_auth_data
-  write_summary
+  if ! "${DRY_RUN}"; then
+    write_summary
+  fi
 
   if [[ "${FAILED_COMMANDS}" -gt 0 ]]; then
     log "WARN" "Collection completed with failures (${FAILED_COMMANDS}). Review *.stderr files."
+  elif "${DRY_RUN}"; then
+    log "INFO" "Dry-run completed."
   else
     log "INFO" "Collection completed successfully."
+    log "INFO" "Summary: ${OUTPUT_DIR}/SUMMARY.txt"
   fi
-  log "INFO" "Summary: ${OUTPUT_DIR}/SUMMARY.txt"
 }
 
 main "$@"
