@@ -39,14 +39,29 @@ require_command() {
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --targets)
+      if [[ $# -lt 2 ]]; then
+        printf 'Error: option requires a value: %s\n\n' "$1" >&2
+        usage >&2
+        exit 1
+      fi
       TARGET_FILE="${2:-}"
       shift 2
       ;;
     --output-dir)
+      if [[ $# -lt 2 ]]; then
+        printf 'Error: option requires a value: %s\n\n' "$1" >&2
+        usage >&2
+        exit 1
+      fi
       OUTPUT_DIR="${2:-}"
       shift 2
       ;;
     --top-ports)
+      if [[ $# -lt 2 ]]; then
+        printf 'Error: option requires a value: %s\n\n' "$1" >&2
+        usage >&2
+        exit 1
+      fi
       TOP_PORT_COUNT="${2:-}"
       shift 2
       ;;
@@ -95,15 +110,17 @@ summary_file="${scan_prefix}_summary.md"
 gnmap_file="${scan_prefix}.gnmap"
 
 if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
-  log "Warning: nmap OS detection (-O) is most accurate when run as root." | tee -a "$scan_log" >/dev/null
+  log "Warning: nmap OS detection (-O) may fail when run without root privileges." | tee -a "$scan_log"
 fi
 
-log "Starting fast host sweep using targets from: $TARGET_FILE" | tee -a "$scan_log" >/dev/null
-log "Writing outputs under: $scan_prefix.[nmap|xml|gnmap]" | tee -a "$scan_log" >/dev/null
+log "Starting fast host sweep using targets from: $TARGET_FILE" | tee -a "$scan_log"
+log "Writing outputs under: $scan_prefix.[nmap|xml|gnmap]" | tee -a "$scan_log"
 
 nmap_cmd=(nmap -sV -O -iL "$TARGET_FILE" -oA "$scan_prefix")
-log "Running: ${nmap_cmd[*]}" | tee -a "$scan_log" >/dev/null
-"${nmap_cmd[@]}" | tee -a "$scan_log" >/dev/null
+log "Running: ${nmap_cmd[*]}" | tee -a "$scan_log"
+if ! "${nmap_cmd[@]}" | tee -a "$scan_log"; then
+  log "Warning: nmap exited with a non-zero status; proceeding with any generated output." | tee -a "$scan_log"
+fi
 
 if [[ ! -f "$gnmap_file" ]]; then
   printf 'Error: expected grepable output not found: %s\n' "$gnmap_file" >&2
@@ -171,9 +188,9 @@ cat <<EOF >> "$summary_file"
 3. Follow up with targeted scripts (banner checks, vuln scripts, or service-specific enumeration).
 EOF
 
-log "Scan complete."
-log "Summary written to: $summary_file"
-log "Primary artifacts:"
-log "  - $scan_prefix.xml"
-log "  - $scan_prefix.gnmap"
-log "  - $scan_prefix.nmap"
+log "Scan complete." | tee -a "$scan_log"
+log "Summary written to: $summary_file" | tee -a "$scan_log"
+log "Primary artifacts:" | tee -a "$scan_log"
+log "  - $scan_prefix.xml" | tee -a "$scan_log"
+log "  - $scan_prefix.gnmap" | tee -a "$scan_log"
+log "  - $scan_prefix.nmap" | tee -a "$scan_log"
