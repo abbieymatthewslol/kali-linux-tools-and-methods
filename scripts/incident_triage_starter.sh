@@ -157,7 +157,7 @@ EOF
 
 collect_host_context() {
   run_capture "UTC date/time" "${OUTPUT_DIR}/host/date_utc.txt" "date -u '+%Y-%m-%dT%H:%M:%SZ'"
-  run_capture "Hostname details" "${OUTPUT_DIR}/host/hostnamectl.txt" "hostnamectl"
+  run_capture "Hostname details" "${OUTPUT_DIR}/host/hostnamectl.txt" "hostnamectl || hostname"
   run_capture "Kernel and platform" "${OUTPUT_DIR}/host/uname.txt" "uname -a"
   run_capture "Uptime" "${OUTPUT_DIR}/host/uptime.txt" "uptime"
   run_capture "Logged-in users (who -a)" "${OUTPUT_DIR}/host/who_a.txt" "who -a"
@@ -211,7 +211,7 @@ collect_auth_data() {
     run_capture \
       "Auth-focused journal view" \
       "${OUTPUT_DIR}/auth/journal_auth_focus.txt" \
-      "journalctl --since '-${JOURNAL_WINDOW}' --no-pager | grep -Ei 'sudo|sshd|authentication|failed password|accepted password|session (opened|closed)'"
+      "journalctl --since '-${JOURNAL_WINDOW}' --no-pager | grep -Ei 'sudo|sshd|authentication|failed password|accepted password|session (opened|closed)' || true"
     run_capture \
       "SSH service journal window" \
       "${OUTPUT_DIR}/auth/journal_ssh_window.txt" \
