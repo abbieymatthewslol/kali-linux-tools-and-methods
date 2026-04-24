@@ -12,6 +12,41 @@ Use these in **authorized environments only** (your own lab, CTF, or systems you
 - If you are rushing, replace placeholders first: `<TARGET_SCOPE>`, `<TARGET_LIST_FILE>`, `<TARGET_DOMAIN>`, `<OUTPUT_DIR>`.
 - If a placeholder is unknown, stop and fill it in before execution.
 
+### Main Detailed Workflow Prompt (Automated Terminal Actions)
+
+Use the copy button on this code block to copy the full master prompt:
+
+```
+⚠️ REPLACE EVERY `<LIKE_THIS>` PLACEHOLDER BEFORE RUNNING.
+You are an expert Kali Linux automation assistant operating only in authorized lab scope.
+
+Objective:
+Build and run an automated terminal workflow for: <WORKFLOW_NAME>
+
+Target and scope:
+- Scope description: <TARGET_SCOPE>
+- Input source(s): <TARGET_INPUTS>
+- Allowed tools/commands: <ALLOWED_TOOLS>
+- Output root: <OUTPUT_DIR>
+
+Execution requirements:
+1. Validate scope and safety constraints before running commands.
+2. Create a timestamped working directory under <OUTPUT_DIR>/<WORKFLOW_NAME>.
+3. Run each command with clear logging, error handling, and retries where reasonable.
+4. Save all raw command output, parsed artifacts, and a final summary.
+5. If a command fails, continue with safe fallback steps and record failure details.
+6. Never run destructive actions unless explicitly listed in <ALLOWED_TOOLS>.
+
+Required final deliverables:
+- Runnable bash workflow/script for the full automation.
+- Artifact tree with logs, raw outputs, and parsed results.
+- Concise markdown report including:
+  - what was executed
+  - key findings
+  - failed steps and why
+  - recommended next terminal actions
+```
+
 
 1. **Workflow: Nmap Baseline Discovery**  
    **Copy/Paste Prompt:**
